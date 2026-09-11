@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>출석 체크</title>
+  <style>
+    :root { color-scheme: dark; --bg:#090d1a; --card:#141b31; --field:#0d1428; --text:#f6f7ff; --muted:#9da8c5; --line:rgba(255,255,255,.11); --accent:#8169ff; --accent2:#b15cff; --success:#55d99a; --error:#ff8196; }
+    * { box-sizing:border-box; }
+    body { min-height:100vh; margin:0; display:grid; place-items:center; padding:24px; color:var(--text); font-family:"Pretendard","Noto Sans KR",system-ui,sans-serif; background:radial-gradient(circle at 16% 10%,rgba(129,105,255,.27),transparent 30%),radial-gradient(circle at 85% 85%,rgba(58,213,176,.14),transparent 29%),var(--bg); }
+    .card { width:min(100%,460px); padding:40px; border:1px solid var(--line); border-radius:28px; background:rgba(20,27,49,.9); box-shadow:0 28px 90px rgba(0,0,0,.42); backdrop-filter:blur(18px); }
+    .badge { display:flex; align-items:center; gap:8px; margin:0 0 12px; color:#cbbfff; font-size:13px; font-weight:800; letter-spacing:.07em; }
+    .badge::before { width:8px; height:8px; border-radius:50%; background:var(--success); box-shadow:0 0 15px var(--success); content:""; }
+    h1 { margin:0 0 9px; font-size:36px; letter-spacing:-.055em; }
+    .intro { margin:0 0 30px; color:var(--muted); font-size:15px; line-height:1.6; }
+    form { display:grid; gap:19px; }
+    .field { display:grid; gap:8px; }
+    label { color:#dce2f8; font-size:14px; font-weight:700; }
+    label span { color:#8995b4; font-weight:500; }
+    input, textarea { width:100%; border:1px solid var(--line); border-radius:13px; outline:0; padding:14px 15px; color:var(--text); background:var(--field); font:inherit; transition:border-color .2s,box-shadow .2s; }
+    input::placeholder, textarea::placeholder { color:#697695; }
+    input:focus, textarea:focus { border-color:var(--accent); box-shadow:0 0 0 4px rgba(129,105,255,.18); }
+    textarea { min-height:92px; resize:vertical; }
+    button { min-height:54px; border:0; border-radius:14px; cursor:pointer; color:#fff; background:linear-gradient(135deg,var(--accent),var(--accent2)); box-shadow:0 13px 30px rgba(129,105,255,.3); font:inherit; font-weight:800; transition:transform .18s,opacity .18s; }
+    button:hover:not(:disabled) { transform:translateY(-2px); }
+    button:disabled { cursor:wait; opacity:.67; }
+    .status { min-height:19px; margin:0; color:var(--error); font-size:13px; text-align:center; }
+    .list-button { width:100%; min-height:50px; margin-top:16px; border:1px solid rgba(129,105,255,.48); background:rgba(129,105,255,.12); box-shadow:none; }
+    .list-button:hover:not(:disabled) { background:rgba(129,105,255,.22); }
+    .attendance-list { display:none; margin-top:22px; padding-top:22px; border-top:1px solid var(--line); }
+    .attendance-list.open { display:block; }
+    .list-title { margin:0 0 12px; font-size:17px; letter-spacing:-.03em; }
+    .list-message { margin:0; color:var(--muted); font-size:14px; text-align:center; }
+    .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:13px; }
+    table { width:100%; min-width:350px; border-collapse:collapse; font-size:13px; }
+    th, td { padding:12px 13px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
+    th { color:#b9c3df; background:rgba(255,255,255,.035); font-size:12px; }
+    td { color:#e8ecf9; }
+    tr:last-child td { border-bottom:0; }
+    .list-time { color:var(--muted); font-size:12px; }
+    .modal-backdrop { position:fixed; inset:0; z-index:10; display:none; place-items:center; padding:24px; background:rgba(2,5,14,.74); backdrop-filter:blur(8px); }
+    .modal-backdrop.open { display:grid; }
+    .modal { width:min(100%,360px); padding:35px 28px 28px; border:1px solid rgba(85,217,154,.28); border-radius:24px; background:#151e34; text-align:center; box-shadow:0 30px 90px rgba(0,0,0,.5); animation:pop .24s ease-out; }
+    @keyframes pop { from { opacity:0; transform:scale(.92) translateY(10px); } to { opacity:1; transform:scale(1) translateY(0); } }
+    .check { display:grid; place-items:center; width:64px; height:64px; margin:0 auto 18px; border-radius:50%; color:#062315; background:var(--success); box-shadow:0 0 0 10px rgba(85,217,154,.12); font-size:34px; font-weight:900; }
+    .modal h2 { margin:0 0 9px; font-size:24px; letter-spacing:-.04em; }
+    .modal p { margin:0 0 23px; color:var(--muted); line-height:1.55; }
+    .modal button { width:100%; min-height:48px; }
+    @media (max-width:480px) { .card { padding:32px 24px; border-radius:22px; } h1 { font-size:32px; } }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <p class="badge">ATTENDANCE CHECK</p>
+    <h1>출석 체크</h1>
+    <p class="intro">이름과 핸드폰번호를 입력하고 출석을 남겨주세요.</p>
+
+    <form id="attendanceForm">
+      <div class="field">
+        <label for="name">이름</label>
+        <input id="name" name="name" type="text" placeholder="이름을 입력하세요" autocomplete="name" required>
+      </div>
+      <div class="field">
+        <label for="phone">핸드폰번호</label>
+        <input id="phone" name="phone" type="tel" inputmode="numeric" maxlength="13" placeholder="010-1234-5678" autocomplete="tel" required>
+      </div>
+      <div class="field">
+        <label for="note">비고 <span>(선택)</span></label>
+        <textarea id="note" name="note" placeholder="남길 말씀이 있다면 입력하세요"></textarea>
+      </div>
+      <button id="submitButton" type="submit">출석체크</button>
+      <p id="statusMessage" class="status" role="alert"></p>
+    </form>
+
+    <button id="loadListButton" class="list-button" type="button">오늘의 출석 현황 보기</button>
+
+    <section id="attendanceList" class="attendance-list" aria-live="polite">
+      <h2 class="list-title">최근 출석 명단</h2>
+      <p id="listMessage" class="list-message">출석 현황을 불러오는 중입니다.</p>
+      <div id="tableWrap" class="table-wrap" hidden>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">시간</th>
+              <th scope="col">이름</th>
+              <th scope="col">핸드폰번호</th>
+              <th scope="col">비고</th>
+            </tr>
+          </thead>
+          <tbody id="attendanceTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="successModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <section class="modal">
+      <div class="check">✓</div>
+      <h2 id="modalTitle">출석체크 완료!</h2>
+      <p>오늘의 출석이 정상적으로 저장되었습니다.</p>
+      <button id="closeModalButton" type="button">확인</button>
+    </section>
+  </div>
+
+  <script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx4mebBMNRXSFaRUBVTFK6lcpTzUsnBDF317onbdtQ8ATJKkG4KFpGO4-5plCyYA5l_Ig/exec";
+    const form = document.getElementById("attendanceForm");
+    const phoneInput = document.getElementById("phone");
+    const nameInput = document.getElementById("name");
+    const submitButton = document.getElementById("submitButton");
+    const statusMessage = document.getElementById("statusMessage");
+    const successModal = document.getElementById("successModal");
+    const closeModalButton = document.getElementById("closeModalButton");
+    const loadListButton = document.getElementById("loadListButton");
+    const attendanceList = document.getElementById("attendanceList");
+    const listMessage = document.getElementById("listMessage");
+    const tableWrap = document.getElementById("tableWrap");
+    const attendanceTableBody = document.getElementById("attendanceTableBody");
+
+    phoneInput.addEventListener("input", () => {
+      const digits = phoneInput.value.replace(/\D/g, "").slice(0, 11);
+      if (digits.length <= 3) phoneInput.value = digits;
+      else if (digits.length <= 7) phoneInput.value = `${digits.slice(0, 3)}-${digits.slice(3)}`;
+      else phoneInput.value = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+    });
+
+    function closeModal() {
+      successModal.classList.remove("open");
+      nameInput.focus();
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const name = nameInput.value.trim();
+      const phone = phoneInput.value.trim();
+      const phoneDigits = phone.replace(/\D/g, "");
+      const note = document.getElementById("note").value.trim();
+
+      if (!name) {
+        statusMessage.textContent = "이름을 입력해 주세요.";
+        nameInput.focus();
+        return;
+      }
+      if (!/^01\d{8,9}$/.test(phoneDigits)) {
+        statusMessage.textContent = "올바른 핸드폰번호를 입력해 주세요.";
+        phoneInput.focus();
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = "전송 중...";
+      statusMessage.textContent = "";
+
+      try {
+        const body = new URLSearchParams({ action: "add", name, phone, note });
+        const response = await fetch(WEB_APP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+          body: body.toString()
+        });
+
+        if (!response.ok) throw new Error("서버 응답 오류가 발생했습니다.");
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message || "출석 저장에 실패했습니다.");
+
+        form.reset();
+        successModal.classList.add("open");
+        closeModalButton.focus();
+      } catch (error) {
+        statusMessage.textContent = error.message || "전송 중 오류가 발생했습니다. 다시 시도해 주세요.";
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "출석체크";
+      }
+    });
+
+    function addCell(row, text, className = "") {
+      const cell = document.createElement("td");
+      cell.textContent = text || "-";
+      if (className) cell.className = className;
+      row.appendChild(cell);
+    }
+
+    async function loadAttendanceList() {
+      attendanceList.classList.add("open");
+      loadListButton.disabled = true;
+      loadListButton.textContent = "불러오는 중...";
+      tableWrap.hidden = true;
+      listMessage.hidden = false;
+      listMessage.textContent = "출석 현황을 불러오는 중입니다.";
+
+      try {
+        const response = await fetch(`${WEB_APP_URL}?action=list`);
+        if (!response.ok) throw new Error("서버 응답 오류가 발생했습니다.");
+        const result = await response.json();
+        if (!result.success) throw new Error(result.message || "출석 현황을 불러오지 못했습니다.");
+
+        const records = (result.data || []).sort((a, b) =>
+          String(b.dateTime || "").localeCompare(String(a.dateTime || ""))
+        );
+        attendanceTableBody.replaceChildren();
+
+        if (records.length === 0) {
+          listMessage.textContent = "아직 출석 기록이 없습니다.";
+          return;
+        }
+
+        records.forEach((record) => {
+          const row = document.createElement("tr");
+          addCell(row, record.dateTime, "list-time");
+          addCell(row, record.name);
+          addCell(row, record.phone);
+          addCell(row, record.note);
+          attendanceTableBody.appendChild(row);
+        });
+
+        listMessage.hidden = true;
+        tableWrap.hidden = false;
+      } catch (error) {
+        listMessage.textContent = error.message || "출석 현황을 불러오는 중 오류가 발생했습니다.";
+      } finally {
+        loadListButton.disabled = false;
+        loadListButton.textContent = "오늘의 출석 현황 보기";
+      }
+    }
+
+    closeModalButton.addEventListener("click", closeModal);
+    loadListButton.addEventListener("click", loadAttendanceList);
+    successModal.addEventListener("click", (event) => {
+      if (event.target === successModal) closeModal();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && successModal.classList.contains("open")) closeModal();
+    });
+  </script>
+</body>
+</html>
