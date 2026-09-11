@@ -37,7 +37,7 @@
     th { color:#b9c3df; background:rgba(255,255,255,.035); font-size:12px; }
     td { color:#e8ecf9; }
     tr:last-child td { border-bottom:0; }
-    .list-time { color:var(--muted); font-size:12px; }
+    .list-order { width:54px; color:var(--muted); font-size:12px; font-weight:700; text-align:center; }
     .modal-backdrop { position:fixed; inset:0; z-index:10; display:none; place-items:center; padding:24px; background:rgba(2,5,14,.74); backdrop-filter:blur(8px); }
     .modal-backdrop.open { display:grid; }
     .modal { width:min(100%,360px); padding:35px 28px 28px; border:1px solid rgba(85,217,154,.28); border-radius:24px; background:#151e34; text-align:center; box-shadow:0 30px 90px rgba(0,0,0,.5); animation:pop .24s ease-out; }
@@ -81,7 +81,7 @@
         <table>
           <thead>
             <tr>
-              <th scope="col">시간</th>
+              <th scope="col">순서</th>
               <th scope="col">이름</th>
               <th scope="col">핸드폰번호</th>
               <th scope="col">비고</th>
@@ -205,9 +205,9 @@
           return;
         }
 
-        records.forEach((record) => {
+        records.forEach((record, index) => {
           const row = document.createElement("tr");
-          addCell(row, record.dateTime, "list-time");
+          addCell(row, String(index + 1), "list-order");
           addCell(row, record.name);
           addCell(row, record.phone);
           addCell(row, record.note);
